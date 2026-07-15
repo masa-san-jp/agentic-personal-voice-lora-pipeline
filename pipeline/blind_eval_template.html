@@ -1,0 +1,194 @@
+<title>__TITLE_TAG__</title>
+<style>
+:root{
+  --bg:#e9ecec; --surface:#fff; --surface-2:#f4f6f6; --ink:#14191b; --muted:#5c686a;
+  --line:#d5dbdb; --accent:#0d8d82; --accent-ink:#0a6a62; --focus:#0d8d82;
+  --c0:#98a2a4; --c1:#d99a2b; --c2:#0d8d82;
+  --shadow:0 1px 2px rgba(20,25,27,.06),0 8px 24px rgba(20,25,27,.06); --maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0d1214; --surface:#161d20; --surface-2:#111719; --ink:#e9eeee; --muted:#8b9799;
+  --line:#26302f; --accent:#28bdae; --accent-ink:#5fd6c9; --focus:#28bdae;
+  --c0:#7c8688; --c1:#e0a83e; --c2:#28bdae;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 28px rgba(0,0,0,.35);}}
+:root[data-theme="light"]{
+  --bg:#e9ecec; --surface:#fff; --surface-2:#f4f6f6; --ink:#14191b; --muted:#5c686a;
+  --line:#d5dbdb; --accent:#0d8d82; --accent-ink:#0a6a62; --focus:#0d8d82;
+  --c0:#98a2a4; --c1:#d99a2b; --c2:#0d8d82;
+  --shadow:0 1px 2px rgba(20,25,27,.06),0 8px 24px rgba(20,25,27,.06);}
+:root[data-theme="dark"]{
+  --bg:#0d1214; --surface:#161d20; --surface-2:#111719; --ink:#e9eeee; --muted:#8b9799;
+  --line:#26302f; --accent:#28bdae; --accent-ink:#5fd6c9; --focus:#28bdae;
+  --c0:#7c8688; --c1:#e0a83e; --c2:#28bdae;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 28px rgba(0,0,0,.35);}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic','Noto Sans JP',system-ui,sans-serif;
+  line-height:1.75;-webkit-font-smoothing:antialiased;}
+.mono{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px 140px;}
+header{padding:52px 0 28px;border-bottom:1px solid var(--line);}
+.eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;margin:0 0 14px;}
+h1{font-size:clamp(26px,5vw,34px);line-height:1.2;margin:0 0 14px;font-weight:800;letter-spacing:-.01em;text-wrap:balance;}
+.lede{font-size:16px;color:var(--muted);margin:0;max-width:60ch;}
+.lede b{color:var(--ink);font-weight:700;}
+.howto{margin:22px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);}
+.howto ol{margin:0;padding-left:1.25em;color:var(--muted);font-size:14.5px;}
+.howto li{margin:5px 0;}.howto b{color:var(--ink);}
+.q{margin:30px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;}
+.q-head{display:flex;align-items:baseline;gap:12px;padding:20px 22px 8px;flex-wrap:wrap;}
+.q-n{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;}
+.q-theme{font-size:18px;font-weight:800;letter-spacing:-.01em;margin:0;flex:1;min-width:0;}
+.q-note{font-size:13px;color:var(--muted);padding:0 22px 14px;margin:0;}
+.samples{display:flex;flex-direction:column;gap:10px;padding:4px 16px 18px;}
+.sample{border:1.5px solid var(--line);border-radius:12px;background:var(--surface-2);cursor:pointer;
+  transition:border-color .15s,background .15s,box-shadow .15s;position:relative;overflow:hidden;}
+.sample:focus-visible{outline:3px solid var(--focus);outline-offset:2px;}
+.sample:hover{border-color:var(--accent);}
+.sample.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--surface-2));box-shadow:0 0 0 1.5px var(--accent) inset;}
+.s-top{display:flex;align-items:center;gap:10px;padding:12px 16px 8px;}
+.s-tag{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-weight:800;font-size:14px;background:var(--ink);color:var(--surface);flex:none;}
+.sample.sel .s-tag{background:var(--accent);color:#fff;}
+.s-pick{margin-left:auto;font-size:12px;font-weight:700;color:var(--accent-ink);opacity:0;letter-spacing:.03em;}
+.sample.sel .s-pick{opacity:1;}
+.s-body{padding:0 16px 14px;font-size:15px;line-height:1.85;white-space:pre-wrap;word-break:break-word;color:var(--ink);}
+.reveal .sample{cursor:default;}
+.reveal .sample:hover{border-color:var(--line);}
+.reveal .sample.sel:hover{border-color:var(--accent);}
+.s-reveal{display:none;align-items:center;gap:8px;padding:9px 16px;border-top:1px dashed var(--line);font-size:12.5px;background:color-mix(in srgb,var(--cond) 12%,transparent);}
+.reveal .s-reveal{display:flex;flex-wrap:wrap;}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--cond);flex:none;}
+.s-cond{font-weight:800;color:var(--cond);}
+.s-step{color:var(--muted);}
+.s-metric{margin-left:auto;color:var(--muted);}
+.reveal .sample{border-left:4px solid var(--cond);}
+.result{margin:30px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:24px 22px;display:none;}
+.result.on{display:block;}
+.result h2{font-size:20px;margin:0 0 6px;font-weight:800;}
+.result .sub{color:var(--muted);font-size:14px;margin:0 0 18px;}
+.bigstat{display:flex;align-items:baseline;gap:10px;margin:0 0 20px;}
+.bigstat .num{font-size:44px;font-weight:800;letter-spacing:-.02em;color:var(--accent);}
+.bigstat .den{font-size:16px;color:var(--muted);}
+.dist{display:flex;flex-direction:column;gap:10px;margin:0 0 20px;}
+.drow{display:grid;grid-template-columns:120px 1fr 40px;align-items:center;gap:12px;}
+.drow .k{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;}
+.drow .track{background:var(--surface-2);border-radius:6px;overflow:hidden;border:1px solid var(--line);}
+.drow .bar{height:12px;border-radius:6px;background:var(--cond);min-width:3px;transition:width .6s cubic-bezier(.2,.7,.2,1);}
+.drow .v{font-size:14px;text-align:right;color:var(--muted);}
+.machine{border-top:1px solid var(--line);padding-top:16px;margin-top:4px;}
+.machine h3{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:700;}
+.mtable{width:100%;border-collapse:collapse;font-size:14px;}
+.mtable th,.mtable td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--line);}
+.mtable th:first-child,.mtable td:first-child{text-align:left;}
+.mtable td.k{display:flex;align-items:center;gap:7px;font-weight:700;}
+.verdict{margin:16px 0 0;padding:14px 16px;border-radius:12px;font-size:14.5px;line-height:1.7;background:color-mix(in srgb,var(--accent) 9%,var(--surface-2));border:1px solid color-mix(in srgb,var(--accent) 25%,var(--line));}
+.bar-cta{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:14px 20px;z-index:10;}
+.bar-inner{max-width:var(--maxw);margin:0 auto;display:flex;align-items:center;gap:16px;}
+.prog{flex:1;min-width:0;}
+.prog .lab{font-size:12.5px;color:var(--muted);margin:0 0 6px;font-weight:600;}
+.prog .track{height:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:5px;overflow:hidden;}
+.prog .fill{height:100%;background:var(--accent);width:0;transition:width .3s;}
+button{font:inherit;cursor:pointer;border:none;border-radius:11px;padding:12px 22px;font-weight:800;background:var(--accent);color:#fff;transition:opacity .15s,transform .05s;white-space:nowrap;letter-spacing:.02em;}
+button:disabled{opacity:.4;cursor:not-allowed;}
+button:hover:not(:disabled){opacity:.9;}button:active:not(:disabled){transform:translateY(1px);}
+button:focus-visible{outline:3px solid var(--focus);outline-offset:2px;}
+button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);padding:12px 16px;}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="wrap">
+<header>
+  <p class="eyebrow">voice-LoRA · human blind eval</p>
+  <h1 id="h1"></h1>
+  <p class="lede" id="lede"></p>
+  <div class="howto"><ol>
+    <li>各お題の <b>A / B / C</b> を読む（どのモデルかは伏せてある）</li>
+    <li>「本物の文体にいちばん近い」1本をタップして選ぶ</li>
+    <li>10問そろったら <b>答え合わせ</b> で正体と結果を開示</li>
+  </ol></div>
+</header>
+<div id="quiz"></div>
+<div id="result" class="result"></div>
+</div>
+<div class="bar-cta"><div class="bar-inner">
+  <div class="prog"><p class="lab"><span id="pcount">0</span> / <span id="ptotal">0</span> 判定</p>
+    <div class="track"><div class="fill" id="pfill"></div></div></div>
+  <button class="ghost" id="resetBtn" style="display:none">やり直す</button>
+  <button id="revealBtn" disabled>答え合わせ</button>
+</div></div>
+<script>
+const DATA=__DATA__, META=__META__, BEST=__BEST__, TARGET=__TARGET__, TITLE=__TITLE__;
+const ORDER=Object.keys(META);                       // worst -> best (insertion order)
+const CVAR={}; ORDER.forEach((k,i)=>CVAR[k]=`var(--c${i})`);
+const LET=["A","B","C"];
+const answers=new Array(DATA.length).fill(null);
+let revealed=false;
+
+document.getElementById("h1").textContent=TITLE;
+document.getElementById("lede").innerHTML=
+ `同じお題に、<b>${ORDER.length}つのモデル</b>（学習の深さ違い）が書いた400字。どれがどれかは伏せてある。各お題で <b>本物の ${TARGET} の文体にいちばん近い</b>と感じる1本を選んで。全問答えると、あなたの判定が機械の指標（文体距離・LLM審査）と一致したかが出る。`;
+document.getElementById("ptotal").textContent=DATA.length;
+
+const quiz=document.getElementById("quiz");
+DATA.forEach((it,qi)=>{
+  const q=document.createElement("section");q.className="q";
+  q.innerHTML=`<div class="q-head"><span class="q-n">問 ${qi+1} / ${DATA.length}</span><h2 class="q-theme"></h2></div>
+    <p class="q-note">この${it.slots.length}本は同じお題に別々のモデルが書いた400字です。</p><div class="samples"></div>`;
+  q.querySelector(".q-theme").textContent=it.theme;
+  const box=q.querySelector(".samples");
+  it.slots.forEach((s,si)=>{
+    const el=document.createElement("div");el.className="sample";el.tabIndex=0;el.setAttribute("role","button");
+    el.style.setProperty("--cond",CVAR[s.cond]);
+    const m=META[s.cond]||{label:s.cond,step:"",};
+    el.innerHTML=`<div class="s-top"><span class="s-tag">${LET[si]}</span><span class="s-pick">✓ これが本物に近い</span></div>
+      <div class="s-body"></div>
+      <div class="s-reveal"><span class="dot"></span><span class="s-cond">${m.label}</span>
+        <span class="s-step">${m.step?"· "+m.step:""}</span>
+        <span class="s-metric mono">距離 ${s.dist} / 審査 ${s.judge}</span></div>`;
+    el.querySelector(".s-body").textContent=s.text;
+    const pick=()=>{if(revealed)return;answers[qi]=si;
+      box.querySelectorAll(".sample").forEach(n=>n.classList.remove("sel"));el.classList.add("sel");update();};
+    el.addEventListener("click",pick);
+    el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pick();}});
+    box.appendChild(el);
+  });
+  quiz.appendChild(q);
+});
+const revealBtn=document.getElementById("revealBtn"),resetBtn=document.getElementById("resetBtn");
+function update(){const n=answers.filter(a=>a!==null).length;
+  document.getElementById("pcount").textContent=n;
+  document.getElementById("pfill").style.width=(n/DATA.length*100)+"%";
+  revealBtn.disabled=n<DATA.length||revealed;}
+revealBtn.addEventListener("click",()=>{revealed=true;
+  document.querySelectorAll(".q").forEach(q=>q.classList.add("reveal"));
+  revealBtn.style.display="none";resetBtn.style.display="";renderResult();
+  document.getElementById("result").scrollIntoView({behavior:"smooth",block:"start"});});
+resetBtn.addEventListener("click",()=>{revealed=false;answers.fill(null);
+  document.querySelectorAll(".q").forEach(q=>q.classList.remove("reveal"));
+  document.querySelectorAll(".sample").forEach(n=>n.classList.remove("sel"));
+  document.getElementById("result").classList.remove("on");
+  revealBtn.style.display="";resetBtn.style.display="none";update();window.scrollTo({top:0,behavior:"smooth"});});
+function renderResult(){
+  const counts={};ORDER.forEach(k=>counts[k]=0);
+  DATA.forEach((it,qi)=>{counts[it.slots[answers[qi]].cond]++;});
+  const best=ORDER.slice().reverse();                 // best -> worst for display
+  const rows=best.map(c=>{const w=counts[c]/DATA.length*100;
+    return `<div class="drow" style="--cond:${CVAR[c]}"><span class="k"><span class="dot" style="background:${CVAR[c]}"></span>${META[c].label}</span>
+      <span class="track"><span class="bar" style="width:${w}%"></span></span><span class="v mono">${counts[c]}</span></div>`;}).join("");
+  const agree=counts[BEST], bl=META[BEST].label, n=DATA.length;
+  let verdict;
+  if(agree>=Math.ceil(n*0.7)) verdict=`あなたのブラインド判定は、機械指標と<b>強く一致</b>した。${n}問中 <b>${agree}問</b>で、機械指標が最良とした「${bl}」を本物の文体に選んでる。人の判定でも機械指標が裏づけられた形。`;
+  else if(agree>=Math.ceil(n*0.4)) verdict=`あなたは${n}問中 <b>${agree}問</b>で「${bl}」を選んだ。機械指標（「${bl}」が最良）と<b>おおむね一致</b>。判断が割れたお題は、機械が最良としたモデルでも人の判定を完全には満たしていない、と読める。`;
+  else verdict=`あなたが「${bl}」を選んだのは${n}問中 <b>${agree}問</b>。機械指標は「${bl}」を最良としたが、<b>人の判定ではそう単純に割れなかった</b>。機械指標と人手評価のズレは、人手ブラインドを測る価値そのもの。`;
+  const mrows=best.map(c=>`<tr><td class="k"><span class="dot" style="background:${CVAR[c]}"></span>${META[c].label}</td>
+    <td class="mono">${META[c].dist}</td><td class="mono">${META[c].judge}</td><td class="mono">${counts[c]}</td></tr>`).join("");
+  const r=document.getElementById("result");r.className="result on";
+  r.innerHTML=`<h2>答え合わせ</h2>
+    <p class="sub">条件を伏せて選んだあなたの判定 = 機械2指標に足りない「人手ブラインド評価」。</p>
+    <div class="bigstat"><span class="num mono">${agree}</span><span class="den">/ ${n} 問で「${bl}」を本物に選んだ</span></div>
+    <div class="dist">${rows}</div><div class="verdict">${verdict}</div>
+    <div class="machine"><h3>機械指標との並置</h3>
+      <table class="mtable"><thead><tr><th>モデル</th><th>文体距離↓</th><th>LLM審査↑</th><th>あなたの票</th></tr></thead>
+      <tbody>${mrows}</tbody></table></div>`;
+}
+update();
+</script>

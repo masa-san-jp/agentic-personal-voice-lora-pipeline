@@ -1,7 +1,19 @@
-# personal-voice-lora-pipeline (English)
+# agentic-personal-voice-lora-pipeline (English)
 
 > 日本語版は [README.md](README.md) を読んでください。
 > Japanese is the primary README; this is the English mirror.
+
+> **About this fork.** This repository is a fork of Yoichi Ochiai's
+> [personal-voice-lora-pipeline](https://github.com/ochyai/personal-voice-lora-pipeline) (MIT).
+> The original corpus/training/compare machinery is inherited as-is; the design,
+> implementation, and examples (`ochiai-v20`) are all his. What this fork adds on
+> top is an **evaluation-to-writeup layer**: (1) a machine benchmark with two
+> metrics — a deterministic stylometric distance and a local-LLM similarity judge
+> (`pipeline/voice_bench.py`); (2) a **human blind test** — a self-contained,
+> offline HTML that hides which adapter is which and asks a person to pick the
+> closest sample (`pipeline/make_blind_eval.py`); and (3) [`AGENTS.md`](AGENTS.md),
+> a runbook so a coding agent can drive the whole flow end-to-end, with the
+> human-required steps clearly marked. Same MIT license as upstream.
 
 > A pipeline for training a LoRA adapter that **writes like a specific person**
 > from their accumulated text. Built and tuned on an NVIDIA GB10 (DGX Spark)
@@ -88,7 +100,7 @@ converter scripts (`files_to_seed_jsonl.py`, `twitter_archive_to_jsonl.py`,
 ## Quick start (big-GPU)
 
 ```bash
-git clone https://github.com/ochyai/personal-voice-lora-pipeline.git ~/voice-lora
+git clone https://github.com/masa-san-jp/agentic-personal-voice-lora-pipeline.git ~/voice-lora
 cd ~/voice-lora
 python3 -m venv .venv && source .venv/bin/activate
 pip install torch transformers peft datasets pyyaml python-docx

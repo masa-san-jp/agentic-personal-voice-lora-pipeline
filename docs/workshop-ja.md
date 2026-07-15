@@ -37,7 +37,7 @@
 ## 2. 道具をそろえる
 
 ```bash
-git clone https://github.com/ochyai/personal-voice-lora-pipeline.git ~/voice-lora
+git clone https://github.com/masa-san-jp/agentic-personal-voice-lora-pipeline.git ~/voice-lora
 cd ~/voice-lora
 python3 -m venv .venv && source .venv/bin/activate
 pip install torch transformers peft datasets pyyaml python-docx
