@@ -297,6 +297,7 @@ agentic-personal-voice-lora-pipeline/
 │   ├── twitter_archive_to_jsonl.py#   X公式アーカイブ → 自分のツイートだけ
 │   ├── gmail_mbox_to_jsonl.py     #   Google Takeout mbox → 自分が送ったメールだけ
 │   ├── chatgpt_export_to_seed_jsonl.py #   ChatGPTエクスポート → 自分の発話だけ
+│   ├── media_transcribe_to_jsonl.py    #   音声/動画 → ローカルWhisper文字起こし（話者分離対応）
 │   ├── claude_code_history_to_jsonl.py #   Claude Code履歴 → 自分の指示だけ（過去分）
 │   └── claude_code_prompt_logger.py    #   〃 これから分をフックで継続蓄積
 ├── pipeline/
