@@ -41,7 +41,8 @@ JSONL は「1行＝1かたまりの文章」のファイルです。中身はこ
 | X（旧Twitter） | 設定 → アカウント → データのアーカイブをダウンロード | `twitter_archive_to_jsonl.py` |
 | Gmail | [takeout.google.com](https://takeout.google.com) で「メール」を選ぶ | `gmail_mbox_to_jsonl.py` |
 | Slack / Discord | 各ワークスペースのエクスポート（JSON） | `../pipeline/build_corpus.py` の `add_slack_export` を参照 |
-| YouTube / 講演の音声 | 字幕や文字起こしを .txt にして上のフォルダへ | `files_to_seed_jsonl.py` |
+| 講演 / 対談 / ポッドキャスト / ボイスメモ（音声・動画） | ファイルをフォルダに集める | `media_transcribe_to_jsonl.py`（ローカル文字起こし） |
+| YouTube / 既にある字幕 | 字幕や文字起こしを .txt にして上のフォルダへ | `files_to_seed_jsonl.py` |
 | **Claude Code への指示** | 自動で貯まる（`~/.claude/projects/` の履歴） | `claude_code_history_to_jsonl.py` ／ 継続蓄積は `claude_code_prompt_logger.py` |
 
 **まずは note やブログなど「長い文章」だけで十分**です。ツイートやメールは後から足せます。
@@ -89,7 +90,47 @@ python collect/gmail_mbox_to_jsonl.py \
     --out ~/voice-lora/raw/email.jsonl
 ```
 
-### 4. Claude Code への指示 → 自分の声として蓄積
+### 4. 音声・動画 → ローカル文字起こしでコーパス化
+
+講演・対談・ポッドキャスト・ボイスメモなどの音声/動画から、**自分が話した文字起こし**を取り出します。
+文字起こしは**手元の Whisper**で行い、クラウドには送りません（隔離方針）。
+
+準備（1回だけ）:
+
+```bash
+sudo apt install ffmpeg          # 音声デコード（brew install ffmpeg でも可）
+pip install faster-whisper       # 推奨。無ければ pip install -U openai-whisper
+```
+
+**(a) 1話者（独白・自分の講演・ボイスメモ）** — 全文をそのまま採用:
+
+```bash
+python collect/media_transcribe_to_jsonl.py \
+    --in ~/talks \
+    --out ~/voice-lora/raw/media.jsonl \
+    --lang ja --model large-v3
+```
+
+`--in` はファイル1つでもフォルダでもOK（`.mp3/.wav/.m4a/.mp4/.mov/.mkv/.webm…` を再帰探索）。
+
+**(b) 複数話者（対談・インタビュー）** — 話者分離して自分の分だけ残す:
+
+```bash
+pip install "pyannote.audio"     # 追加で必要
+# huggingface.co で pyannote/speaker-diarization-3.1 の規約に同意し HF トークンを発行（⚑要人間）
+python collect/media_transcribe_to_jsonl.py \
+    --in interview.mp4 --out raw/media.jsonl \
+    --diarize --speaker SPEAKER_01 --hf-token <HF_TOKEN> --lang ja
+```
+
+`--speaker` を省くと**最も長く話している話者**を自動採用します（自分がホスト/主役の対談ならこれで概ね合う）。
+どのラベルが自分かは一度実行してログを見て決めるのが確実です。文字起こしは文単位で
+[MIN,MAX] 字に整形し、400字未満と重複は捨て、PII はマスクします。
+
+> GPU があるなら `--device cuda`、省メモリなら `--compute-type int8` が効きます。
+> 文字起こしは重い処理なので、長時間素材はまとめて夜間に回すのがおすすめです。
+
+### 5. Claude Code への指示 → 自分の声として蓄積
 
 Claude Code に打ち込む指示も、**あなたが自分の言葉で書いたテキスト**です（命令調・簡潔・技術的）。
 Claude Code は各セッションを `~/.claude/projects/<プロジェクト>/<セッションID>.jsonl` に記録していて、

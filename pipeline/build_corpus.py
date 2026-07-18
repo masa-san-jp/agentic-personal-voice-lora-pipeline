@@ -323,6 +323,9 @@ def build_v8(records):
                   source_tag="Presentation.notes")
     # Docx archive (book drafts, manuscripts, etc)
     add_docx_dir(records, RAW / "manuscripts", source_tag="Manuscript.docx")
+    # Audio/video transcripts — produce raw/media.jsonl with
+    # collect/media_transcribe_to_jsonl.py (local Whisper; --diarize for interviews).
+    # add_existing_jsonl(records, RAW / "media.jsonl", source_tag="Talk.media")
 
 
 BUILD_PLAN = {
