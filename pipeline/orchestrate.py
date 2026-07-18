@@ -23,6 +23,7 @@ Paths are configurable via env:
 import json
 import os
 import shlex
+import signal
 import subprocess
 import sys
 import time
@@ -54,6 +55,14 @@ RUN_PREFIX = os.environ.get("VOICE_LORA_RUN_PREFIX", "voice-lora")
 
 MAX_RETRIES = 3
 SLEEP_BETWEEN = 30
+
+# Exit code the trainer uses when it stops early for a graceful pause (SIGUSR1
+# from the memory watcher, or a manual `systemctl --user kill -s SIGUSR1`).
+# A pause is resumable, not a failure: we wait for memory to recover, then
+# re-run the same version, which auto-resumes from its last checkpoint. Pauses
+# do NOT consume the per-version retry budget.
+PAUSE_EXIT_CODE = 3
+SLEEP_AFTER_PAUSE = int(os.environ.get("VOICE_LORA_PAUSE_SLEEP", "120"))
 
 
 def now_iso():
@@ -110,7 +119,13 @@ def ensure_corpus(corpus_name, log_fp):
 
 
 def run_version(vid, vspec, defaults, prior_done):
-    """Build corpus + train one version. Returns True on success."""
+    """Build corpus + train one version.
+
+    Returns one of:
+      "done"   — trained to completion and final_adapter saved.
+      "paused" — trainer stepped aside for memory (exit 3); resume, no retry cost.
+      "failed" — real failure; counts against the retry budget.
+    """
     log_path = LOGS / f"{vid}.log"
     cfg = {**defaults, **vspec}
 
@@ -160,13 +175,18 @@ def run_version(vid, vspec, defaults, prior_done):
         elapsed = time.time() - start
         log_fp.write(f"\n=== {vid} exit={proc.returncode} elapsed={elapsed:.1f}s ===\n")
 
+        if proc.returncode == PAUSE_EXIT_CODE:
+            log_fp.write(f"{vid} paused (graceful checkpoint) — will resume from "
+                         f"latest checkpoint after memory recovers\n")
+            return "paused"
+
         if proc.returncode != 0:
-            return False
+            return "failed"
 
         # Verify final_adapter saved
         if not (output_dir / "final_adapter" / "adapter_config.json").exists():
             log_fp.write(f"WARN: final_adapter missing for {vid}\n")
-            return False
+            return "failed"
 
         # Optionally run compare_checkpoints (non-fatal)
         if COMPARE_SCRIPT.exists():
@@ -181,10 +201,16 @@ def run_version(vid, vspec, defaults, prior_done):
             except Exception as e:
                 log_fp.write(f"compare_checkpoints failed (non-fatal): {e}\n")
 
-        return True
+        return "done"
 
 
 def main():
+    # The memory watcher pauses training with `systemctl --user kill -s SIGUSR1`,
+    # which delivers SIGUSR1 to every process in the unit's cgroup — including
+    # this orchestrator. Ignore it here so only the trainer child acts on it;
+    # otherwise the default SIGUSR1 action would terminate the orchestrator.
+    signal.signal(signal.SIGUSR1, signal.SIG_IGN)
+
     if not VERSIONS_YAML.exists():
         print(f"ERROR: {VERSIONS_YAML} not found. Copy versions.example.yaml first.",
               file=sys.stderr)
@@ -213,18 +239,28 @@ def main():
             log_event(state, vid, "start", retry=vstate["retries"])
 
             try:
-                ok = run_version(vid, versions[vid], defaults, prior_done)
+                result = run_version(vid, versions[vid], defaults, prior_done)
             except Exception as e:
-                ok = False
+                result = "failed"
                 log_event(state, vid, "exception", error=str(e))
 
-            if ok:
+            if result == "done":
                 vstate["status"] = "done"
                 vstate["finished"] = now_iso()
                 save_state(state)
                 log_event(state, vid, "done")
                 prior_done.append(vid)
                 break
+            elif result == "paused":
+                # Graceful memory pause: not a failure. Wait for memory to
+                # recover, then re-run the same version (auto-resumes from its
+                # last checkpoint). Does not consume the retry budget.
+                vstate["status"] = "paused"
+                vstate["pauses"] = vstate.get("pauses", 0) + 1
+                save_state(state)
+                log_event(state, vid, "paused", pauses=vstate["pauses"])
+                time.sleep(SLEEP_AFTER_PAUSE)
+                continue
             else:
                 vstate["retries"] += 1
                 vstate["status"] = "failed"

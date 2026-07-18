@@ -15,8 +15,26 @@ ExecStart=%h/voice-lora/.venv/bin/python3 %h/voice-lora/pipeline/orchestrate.py
 StandardOutput=append:%h/voice-lora/logs/orchestrator.log
 StandardError=append:%h/voice-lora/logs/orchestrator.log
 
+# --- Memory safety (see docs/stability.md) -------------------------------
+# On unified-memory hosts (DGX Spark / GB10) the GPU and CPU share one pool,
+# so a runaway training step can take the whole box down with it. Cap the
+# cgroup so the kernel reclaims / OOM-kills *inside* this unit before the
+# system as a whole runs out. Uncomment and size to your host — a safe start
+# is ~80% of total RAM for MemoryMax, ~90% for MemoryHigh (soft throttle).
+# On a 128GB GB10:
+#   MemoryHigh=104G
+#   MemoryMax=112G
+#   MemorySwapMax=16G
+# Prefer this unit as the OOM victim over sshd/system daemons, so if the
+# kernel OOM killer does fire, it takes the training — not your way back in.
+#   OOMScoreAdjust=500
+# -------------------------------------------------------------------------
+
 # Restart on failure (transient OOM / disk full / etc). Clean exit (0) or explicit
-# halt (exit 2) does NOT trigger restart.
+# halt (exit 2) does NOT trigger restart. A graceful memory pause is handled
+# inside the orchestrator (trainer exit 3), so it never reaches systemd here.
+# On memory-constrained hosts, raise RestartSec (e.g. 120) to give RAM time to
+# recover before the orchestrator restarts.
 Restart=on-failure
 RestartSec=60
 

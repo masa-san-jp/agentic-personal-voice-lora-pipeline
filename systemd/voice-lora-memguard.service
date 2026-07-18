@@ -1,0 +1,12 @@
+[Unit]
+Description=Voice LoRA memory guard — checkpoint+pause training before OOM
+# Backstop that sends SIGUSR1 to voice-lora.service when free RAM runs low.
+# Driven by voice-lora-memguard.timer (once per minute). See docs/stability.md.
+
+[Service]
+Type=oneshot
+# Adjust the path to your install location.
+ExecStart=%h/voice-lora/systemd/mem-guard.sh
+# Pause threshold in KiB (default in the script is 4 GiB). Size this ABOVE
+# a single training step's peak allocation so the pause lands before the cap.
+# Environment="VOICE_LORA_MEM_MIN_KB=8388608"

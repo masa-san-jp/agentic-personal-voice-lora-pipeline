@@ -124,6 +124,12 @@ journalctl --user -u voice-lora.service -f
 See [docs/setup.md](docs/setup.md) for the full install, and
 [docs/workshop-ja.md](docs/workshop-ja.md) for the step-by-step workshop guide.
 
+**Before running unattended:** a multi-day run on a home machine can be taken
+down by OOM, which is hard to recover from remotely. [docs/stability.md](docs/stability.md)
+covers keeping the box alive (cgroup memory caps, swap, earlyoom) and resuming
+without progress loss (per-checkpoint auto-resume + a graceful checkpoint-and-pause
+signal), including the unified-memory caveats specific to DGX Spark (GB10).
+
 ---
 
 ## What it gets you, what it doesn't

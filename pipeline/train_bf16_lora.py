@@ -15,10 +15,26 @@ Continuous-friendly: when invoked with `--resume_from <adapter_dir>`, loads
 the LoRA weights from that dir before starting a fresh training run on this
 corpus. This is how the orchestrator chains versions: each step inherits
 the previous step's adapter and trains for one more (epoch-on-corpus) pass.
+
+Crash-friendly: within a single version, the HF Trainer checkpoints every
+`save_steps`. If this run is interrupted (OOM kill, reboot, graceful pause)
+and re-invoked with the same `--output`, it auto-resumes from the latest
+`checkpoint-*` in that dir — restoring optimizer/scheduler/step, not just
+weights — so an interrupted version loses at most `save_steps` steps instead
+of restarting from zero. Disable with `--no_auto_resume`.
+
+Pause-friendly: on SIGUSR1 the trainer finishes the current step, writes a
+checkpoint, and exits with code 3 ("paused, resume me"). This is how a
+memory watcher (see docs/stability.md) asks training to step aside *before*
+the kernel OOM-kills it, without losing progress. The orchestrator treats
+exit 3 as a resumable pause, not a failure.
 """
 import argparse
 import json
 import os
+import re
+import signal
+import sys
 from pathlib import Path
 
 import torch
@@ -27,8 +43,57 @@ from peft import LoraConfig, PeftModel, get_peft_model
 from transformers import (
     AutoModelForCausalLM, AutoTokenizer,
     DataCollatorForLanguageModeling,
-    Trainer, TrainingArguments,
+    Trainer, TrainerCallback, TrainingArguments,
 )
+
+# Exit code the trainer uses when it stops early because of a graceful-pause
+# signal. The orchestrator interprets this specifically (resume, don't count
+# as a retry). Anything else non-zero is a real failure.
+PAUSE_EXIT_CODE = 3
+
+# Set by the SIGUSR1 handler; polled by GracefulStopCallback at each step end.
+_STOP_REQUESTED = False
+
+
+def _request_graceful_stop(signum, _frame):
+    global _STOP_REQUESTED
+    _STOP_REQUESTED = True
+    print(
+        f"\n[signal {signum}] graceful stop requested — will checkpoint at the "
+        f"end of the current step and exit {PAUSE_EXIT_CODE} for resume.",
+        flush=True,
+    )
+
+
+class GracefulStopCallback(TrainerCallback):
+    """Turn a pending SIGUSR1 into a clean checkpoint-and-stop at a step boundary.
+
+    Stopping between steps (rather than mid-backward) guarantees the saved
+    checkpoint is consistent, so the resumed run continues from a valid state.
+    """
+
+    def on_step_end(self, args, state, control, **kwargs):
+        if _STOP_REQUESTED:
+            control.should_save = True
+            control.should_training_stop = True
+        return control
+
+
+def find_last_checkpoint(output_dir):
+    """Return the newest valid `checkpoint-<step>` dir in output_dir, or None."""
+    root = Path(output_dir)
+    if not root.is_dir():
+        return None
+    candidates = []
+    for d in root.glob("checkpoint-*"):
+        m = re.match(r"checkpoint-(\d+)$", d.name)
+        # A checkpoint is only resumable if the trainer state was written.
+        if m and d.is_dir() and (d / "trainer_state.json").exists():
+            candidates.append((int(m.group(1)), d))
+    if not candidates:
+        return None
+    candidates.sort()
+    return candidates[-1][1]
 
 
 def load_jsonl(path):
@@ -59,6 +124,10 @@ def main():
                          "Requires bitsandbytes. ~30%% slower, same adapter output.")
     ap.add_argument("--resume_from", default=None,
                     help="Path to adapter to resume from")
+    ap.add_argument("--no_auto_resume", action="store_true",
+                    help="Do not auto-resume from the latest checkpoint in "
+                         "--output. By default an interrupted run continues "
+                         "from its last checkpoint instead of restarting.")
     args = ap.parse_args()
 
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
@@ -154,8 +223,33 @@ def main():
     )
 
     trainer = Trainer(model=model, args=training_args, train_dataset=ds, data_collator=collator)
+    trainer.add_callback(GracefulStopCallback())
+
+    # SIGUSR1 = "checkpoint and step aside" (memory watcher / manual pause).
+    # See docs/stability.md. We deliberately do NOT trap SIGTERM here so a
+    # normal `systemctl stop` still tears the process down promptly.
+    signal.signal(signal.SIGUSR1, _request_graceful_stop)
+
+    # Crash recovery: resume this version from its own latest checkpoint if one
+    # exists. Distinct from --resume_from (which inherits the *previous*
+    # version's adapter); here we continue an interrupted run of *this* version,
+    # restoring optimizer + lr schedule + step, so we lose at most save_steps.
+    resume_ckpt = None
+    if not args.no_auto_resume:
+        resume_ckpt = find_last_checkpoint(args.output)
+        if resume_ckpt is not None:
+            print(f"Auto-resuming from checkpoint: {resume_ckpt}")
+
     print("Starting training...")
-    trainer.train()
+    trainer.train(resume_from_checkpoint=str(resume_ckpt) if resume_ckpt else None)
+
+    if _STOP_REQUESTED:
+        # Graceful pause: checkpoint is on disk, but the version is NOT done.
+        # Exit with the pause code so the orchestrator resumes rather than
+        # treating a partial adapter as a finished version.
+        print(f"Graceful stop complete: latest checkpoint saved under "
+              f"{args.output}. Exiting {PAUSE_EXIT_CODE} for orchestrated resume.")
+        sys.exit(PAUSE_EXIT_CODE)
 
     out = Path(args.output)
     trainer.model.save_pretrained(out / "final_adapter")

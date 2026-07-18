@@ -93,6 +93,13 @@ systemctl --user status voice-lora.service
 journalctl --user -u voice-lora.service -f
 ```
 
+**Keeping it alive while you're away.** A multi-day run can be killed by OOM,
+which is hard to recover from remotely. Before running unattended, set up the
+memory caps, swap, earlyoom, and the graceful checkpoint-and-pause watcher in
+[stability.md](stability.md). The `voice-lora.service` unit ships with the
+memory-limit lines pre-written (commented) so you only size them to your host.
+On GB10 (unified memory) this matters more, not less — read the GB10 section.
+
 ## 7. (Optional) Watch from another machine
 
 If the GPU box is on Tailscale, you can monitor from anywhere:
@@ -144,3 +151,12 @@ If you still OOM, drop `--seq_len` to 1024 first.
   that's missing (previous version didn't save it), the resume falls
   back to `null` and the model trains from base. Check `logs/<vid>.log`
   for the resolved `resume_from:` line.
+- **Whole machine freezes / reboots mid-run (not just the process)**: that's
+  RAM OOM, not VRAM. Confirm with `dmesg | grep -i "out of memory"` and apply
+  the memory caps / swap / earlyoom in [stability.md](stability.md). On GB10
+  the GPU and CPU share one memory pool, so VRAM pressure and RAM pressure are
+  the same thing — see the GB10 section there.
+- **A version restarts from step 0 after an interruption**: it shouldn't — the
+  trainer auto-resumes from the newest `checkpoint-*` in its output dir. If it
+  didn't, either `--no_auto_resume` was passed, or the last checkpoint lacks
+  `trainer_state.json` (interrupted mid-save; it falls back to the prior one).

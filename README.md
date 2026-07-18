@@ -179,6 +179,13 @@ systemctl --user enable --now voice-lora.service
 
 途中でクラッシュしても、`state.json` に進み具合が残っているので、
 **終わった版はとばして、失敗した版だけ最大3回までやり直し**ます。
+さらに各版は途中のチェックポイントから自動で続きを再開するので、再起動しても
+失うのは最大200ステップ分だけです。
+
+> **外出先に出る前に**：長時間学習で自宅マシンが OOM で落ちると遠隔復旧が難しい。
+> 「落とさない／落ちても自動で続きから再開する」ための設定（メモリ上限・swap・
+> earlyoom・安全停止→自動再開）は [docs/stability.md](docs/stability.md) にまとめました。
+> DGX Spark (GB10) の統合メモリ特有の注意もここにあります。**外に出る運用をする前に読んでください。**
 
 ### 7. 見守る
 
@@ -294,11 +301,16 @@ agentic-personal-voice-lora-pipeline/
 │   ├── eval_prompts.example.yaml  # 評価お題6本（known / generalize / style）
 │   ├── versions.example.yaml      # 15段スケジュール（自前GPU向け）
 │   └── versions.mini.example.yaml # 10段の軽量スケジュール（小型GPU / QLoRA向け）
-├── systemd/voice-lora.service     # ユーザーsystemdユニット。落ちても自動再起動
+├── systemd/
+│   ├── voice-lora.service         # ユーザーsystemdユニット。落ちても自動再起動
+│   ├── mem-guard.sh               # メモリ監視ワッチャー。落ちる前に安全停止を指示
+│   ├── voice-lora-memguard.service#   ↑を毎分走らせる oneshot
+│   └── voice-lora-memguard.timer  #   ↑のタイマー（毎分）
 ├── examples/voice_compare_report_example.md  # 実物の出力例（ochiai-v20）。上から下へ読む
 ├── docs/
 │   ├── workshop-ja.md             # ★ワークショップ当日の手順（優しい日本語）
 │   ├── setup.md                   # まっさらなGPUへの導入手順
+│   ├── stability.md               # ★落とさない／落ちても自動復帰（OOM対策・GB10注意）
 │   ├── corpus-strategy.md         # 「増やす→染み込ませる」がなぜ効くか
 │   └── lessons.md                 # うまくいったこと・失敗したこと・落とし穴
 ├── AGENTS.md                      # ★エージェント向け実行手順（[AGENT]自走 / ⚑HUMAN依頼を明示）

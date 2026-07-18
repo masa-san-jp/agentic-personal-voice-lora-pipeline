@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the Voice LoRA memory guard once per minute
+
+[Timer]
+# First check 1 min after boot, then every minute. Keeps memory-pressure
+# detection cheap and frequent; the guard only acts when RAM is actually low.
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target
