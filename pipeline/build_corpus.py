@@ -302,6 +302,11 @@ def build_v7(records):
     add_slack_export(records, RAW / "slack_team_a.jsonl",
                      source_tag="Personal.slack",
                      author_keyword="your_username")
+    # Claude Code instructions — your own prompts are your voice too. Produce
+    # these with collect/claude_code_history_to_jsonl.py (backfill from
+    # ~/.claude/projects) and/or collect/claude_code_prompt_logger.py (live hook).
+    # add_existing_jsonl(records, RAW / "claude_code.jsonl", source_tag="Personal.claude_code")
+    # add_existing_jsonl(records, RAW / "claude_code_live.jsonl", source_tag="Personal.claude_code")
 
 
 def build_v8(records):

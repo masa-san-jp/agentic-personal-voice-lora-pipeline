@@ -42,6 +42,7 @@ JSONL は「1行＝1かたまりの文章」のファイルです。中身はこ
 | Gmail | [takeout.google.com](https://takeout.google.com) で「メール」を選ぶ | `gmail_mbox_to_jsonl.py` |
 | Slack / Discord | 各ワークスペースのエクスポート（JSON） | `../pipeline/build_corpus.py` の `add_slack_export` を参照 |
 | YouTube / 講演の音声 | 字幕や文字起こしを .txt にして上のフォルダへ | `files_to_seed_jsonl.py` |
+| **Claude Code への指示** | 自動で貯まる（`~/.claude/projects/` の履歴） | `claude_code_history_to_jsonl.py` ／ 継続蓄積は `claude_code_prompt_logger.py` |
 
 **まずは note やブログなど「長い文章」だけで十分**です。ツイートやメールは後から足せます。
 長文ほど“声”の情報が濃く、短い断片（ツイート・チャット）は薄いです。
@@ -87,6 +88,49 @@ python collect/gmail_mbox_to_jsonl.py \
     --me you@example.com \
     --out ~/voice-lora/raw/email.jsonl
 ```
+
+### 4. Claude Code への指示 → 自分の声として蓄積
+
+Claude Code に打ち込む指示も、**あなたが自分の言葉で書いたテキスト**です（命令調・簡潔・技術的）。
+Claude Code は各セッションを `~/.claude/projects/<プロジェクト>/<セッションID>.jsonl` に記録していて、
+その中の「人間が打った turn」だけを抜き出せます（ツールの出力やアシスタントの発話は除外）。
+
+**(a) 過去分をまとめて回収（バックフィル）**
+
+```bash
+# 引数なしで ~/.claude/projects を読み、$VOICE_LORA_ROOT/raw/claude_code.jsonl を書き出す
+python collect/claude_code_history_to_jsonl.py
+# 特定プロジェクトだけに絞るなら:
+python collect/claude_code_history_to_jsonl.py --project-substr my-repo
+```
+
+セッション単位で時系列に人間の指示だけを結合し、システムreminder・スラッシュコマンド・
+コードブロック（既定で除去。残すなら `--keep-code`）を落として整えます。**再実行すれば新しい
+セッションも拾う**ので、使い続けるほど貯まります。
+
+**(b) これから分を自動で貯める（ライブ・任意）**
+
+Claude Code の `UserPromptSubmit` フックに登録すると、打った指示が1行ずつ
+`raw/claude_code_live.jsonl` に追記されていきます。Claude Code の `settings.json` に：
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command",
+        "command": "python3 ~/voice-lora/collect/claude_code_prompt_logger.py" } ] }
+    ]
+  }
+}
+```
+
+ログは `raw/` の中（git 除外済み）に留まり、外には出ません。スラッシュコマンドや極端に短い指示は
+自動でスキップ、PII（メール・電話等）はマスクされます。フックは何も標準出力に出さず、必ず正常終了
+するので、プロンプトの挙動を邪魔しません。
+
+生成した `claude_code.jsonl` / `claude_code_live.jsonl` は、`build_corpus.py` の `BUILD_PLAN`
+（`build_v7` にコメントで例を用意）で `add_existing_jsonl(..., source_tag="Personal.claude_code")`
+として取り込めます。
 
 ---
 
