@@ -36,6 +36,49 @@ MIN_CHARS = 400
 MAX_CHARS = 16000
 
 # ============================================================
+# PII redaction — applied uniformly to EVERY record, all sources
+# ============================================================
+#
+# The corpus contains private mail / chat / internal docs. A voice model can
+# memorize and regurgitate mechanical PII verbatim, so we mask the
+# high-confidence, machine-detectable kinds at the single choke point
+# (`write_jsonl`). Because every loader in BUILD_PLAN ends up there, this
+# covers all current and future sources automatically — nothing to remember
+# to call per-loader.
+#
+# What is masked (conservative, low voice impact — placeholders preserve
+# sentence rhythm):
+#   • email addresses            -> <EMAIL>
+#   • JP postal codes (123-4567) -> <POSTAL>
+#   • long digit runs            -> <NUM>   (phone / credit-card / long IDs)
+#
+# Deliberately NOT attempted here: person names and free-form addresses.
+# Regex can't do those reliably, and over-redaction damages the voice. Those
+# rely on the isolation model instead (gitignored raw/ data/, network-isolated
+# GPU — see README "プライバシーの線引き").
+#
+# Order matters: <NUM> runs before <POSTAL> so a full phone number
+# (03-1234-5678) is masked whole as <NUM>, not chopped into a stray <POSTAL>.
+# <POSTAL> then uses look-arounds so it only fires on a *standalone* 123-4567,
+# never on a hyphen-digit fragment that belongs to a longer number.
+
+_REDACTIONS = [
+    (re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+"), "<EMAIL>"),
+    (re.compile(r"\b\d[\d\s-]{8,}\d\b"), "<NUM>"),                       # phone / card / long id run
+    (re.compile(r"(?<![\d-])〒?\s?\d{3}-\d{4}(?![\d-])"), "<POSTAL>"),   # JP postal code
+]
+
+
+def redact(text):
+    """Mask high-confidence PII. Returns (redacted_text, num_replacements)."""
+    total = 0
+    for pat, repl in _REDACTIONS:
+        text, k = pat.subn(repl, text)
+        total += k
+    return text, total
+
+
+# ============================================================
 # Generic utilities — reusable across projects
 # ============================================================
 
@@ -79,26 +122,32 @@ def text_id(t):
 
 
 def write_jsonl(path, records):
-    """Write records to JSONL with dedup-by-prefix-hash and min-length filtering."""
-    n, total_chars = 0, 0
+    """Write records to JSONL with PII redaction, dedup-by-prefix-hash, and
+    min-length filtering. Redaction runs first so length/dedup act on the
+    masked text and only the masked text is ever written to disk."""
+    n, total_chars, redactions = 0, 0, 0
     seen = set()
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         for r in records:
             t = r.get("text", "").strip()
+            t, k = redact(t)
+            redactions += k
             if len(t) < MIN_CHARS:
                 continue
             h = text_id(t)
             if h in seen:
                 continue
             seen.add(h)
+            r["text"] = t          # persist the redacted text, never the raw
             r.setdefault("id", h)
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
             n += 1
             total_chars += len(t)
     print(f"  wrote {path.name}: {n:,} records, {total_chars:,} chars "
-          f"(~{total_chars/2_000_000:.1f}M tok JA, ~{total_chars/4_000_000:.1f}M tok EN)")
+          f"(~{total_chars/2_000_000:.1f}M tok JA, ~{total_chars/4_000_000:.1f}M tok EN); "
+          f"redacted {redactions:,} PII span(s)")
     return n, total_chars
 
 

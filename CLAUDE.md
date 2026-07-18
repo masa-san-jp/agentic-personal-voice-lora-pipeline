@@ -105,6 +105,10 @@ python3 pipeline/make_blind_eval.py --bench base=... mini=... pen=... --best pen
   （実体は個人設定）。編集するのは **`.example` 版**、または新規に自分用を作る。
 - 事実を検証せず「できた」と書かない。記事の数値は bench 出力からの**転記のみ**。
 - 生成モデルは**事実を平気で捏造する**（voice 用途にはOK、調査アシスタントには不可）。
+- `build_corpus.py` は `write_jsonl`（全ソースの唯一の出口）で PII を一律マスク
+  （`<EMAIL>`/`<POSTAL>`/`<NUM>`）。新しい source-loader を足しても書き出しはここを通るので
+  自動で効く。**redact を無効化したり、write_jsonl を経由しない書き出し経路を作らない**こと。
+  氏名・自由記述の住所は regex 対象外（隔離モデルで守る）。
 
 ## いつ人間に聞くか
 

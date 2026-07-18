@@ -57,6 +57,9 @@ python3 pipeline/build_corpus.py --name v8 --out raw/v8.jsonl
 cp pipeline/versions.mini.example.yaml pipeline/versions.yaml   # base_model / corpus キーを実体に合わせて編集
 ```
 
+`build_corpus.py` は書き出しの出口 `write_jsonl` で全ソース一律に PII をマスク（`<EMAIL>`/`<POSTAL>`/`<NUM>`）。
+新しい source-loader を足しても書き出しはここを通るので自動で効く。**redact を外す／write_jsonl を通さない書き出しを作らないこと。**
+
 「増やす→染み込ませる（＝同じデータの反復学習）」がなぜ効くかは [docs/corpus-strategy.md](docs/corpus-strategy.md)。
 
 ## 5. 学習を回す — [AGENT] が起動（GPU 時間は [⚑ HUMAN] 依存）
