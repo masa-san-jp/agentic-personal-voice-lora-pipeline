@@ -295,7 +295,10 @@ agentic-personal-voice-lora-pipeline/
 │   ├── README.md                  #   集め方ガイド（note/X/Gmail…→ raw/ へ）
 │   ├── files_to_seed_jsonl.py     #   txt/md/docx/pdf フォルダ → 種コーパス
 │   ├── twitter_archive_to_jsonl.py#   X公式アーカイブ → 自分のツイートだけ
-│   └── gmail_mbox_to_jsonl.py     #   Google Takeout mbox → 自分が送ったメールだけ
+│   ├── gmail_mbox_to_jsonl.py     #   Google Takeout mbox → 自分が送ったメールだけ
+│   ├── chatgpt_export_to_seed_jsonl.py #   ChatGPTエクスポート → 自分の発話だけ
+│   ├── claude_code_history_to_jsonl.py #   Claude Code履歴 → 自分の指示だけ（過去分）
+│   └── claude_code_prompt_logger.py    #   〃 これから分をフックで継続蓄積
 ├── pipeline/
 │   ├── orchestrate.py             # 司令塔。versions.yaml を読んで順番に学習。落ちても再開
 │   ├── build_corpus.py            # コーパス作成のテンプレ。BUILD_PLAN を自分用に書き換える
